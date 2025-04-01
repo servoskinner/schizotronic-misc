@@ -77,7 +77,7 @@ class Archivist
         if (!serialized.has_value()) {
             return {};
         }
-        return {deserialize<Type>(serialized.value())};
+        return { deserialize<Type>(serialized.value()) };
     }
 
     template <typename Type>

@@ -13,7 +13,7 @@
 template <typename Iterable_type, typename Key_type>
 inline bool pop_val(Iterable_type& container, const Key_type& key) 
 {
-    auto found = std::find(container.begin(), container.end(), key)
+    auto found = std::find(container.begin(), container.end(), key);
     if (found == container.end()) {
         return false;
     }
@@ -66,23 +66,23 @@ constexpr inline bool is_wordch(uint32_t ch)
 }
 
 /// @brief Maps 2d array indices into 1d array index.
-constexpr inline int to_1d(std::pair<uint32_t, uint32_t> indices, uint32_t width)
+constexpr inline int32_t to_1d(std::pair<int32_t, int32_t> indices, uint32_t width)
 {
-    return indices.first * width + indices.second;
+    return indices.first * static_cast<int32_t>(width) + indices.second;
 }
 /// @brief Maps 2d array indices into 1d array index.
-constexpr inline int to_1d(Vector2i indices, uint32_t width)
+constexpr inline int32_t to_1d(Vector2i indices, uint32_t width)
 {
-    return indices.x * width + indices.y;
+    return indices.x * static_cast<int32_t>(width) + indices.y;
 }
 /// @brief Maps 2d array indices into 1d array index.
-constexpr inline int to_1d(uint32_t x, uint32_t y, uint32_t width)
+constexpr inline int32_t to_1d(int32_t x, int32_t y, uint32_t width)
 {
-    return x * width + y;
+    return x * static_cast<int32_t>(width) + y;
 }
 
 /// @brief Maps 1d array index into 2d array pair of indices.
 constexpr inline Vector2i to_2d(uint32_t index, uint32_t width)
 {
-    return {index / width, index % width};
+    return {static_cast<int32_t>(index / width), static_cast<int32_t>(index % width)};
 }

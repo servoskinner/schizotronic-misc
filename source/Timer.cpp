@@ -1,6 +1,6 @@
 #include <sztronics/miscellaneous/Timer.hpp>
 
-Timer::Timed_event::Timed_event(std::function<void(void)> event, float t_seconds, int n_repeat = -1) : 
+Timer::Timed_event::Timed_event(std::function<void(void)> event, float t_seconds, int n_repeat) : 
     event(event), t_seconds(t_seconds), \                                                                                         
     countdown(t_seconds), mutex(), \                                                                             
     n_repeat(n_repeat) {}

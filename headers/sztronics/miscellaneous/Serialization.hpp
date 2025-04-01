@@ -62,74 +62,87 @@ Serialized serialize(const std::unordered_map<Keytype, Valtype>& map)
     return serialized;
 }
 
-/// @brief Restores a fixed-size struct from a byte vector.
+template <typename Type>
+struct Serializable_vector_traits : std::false_type {};
+
+template <typename Type>
+struct Serializable_vector_traits<std::vector<Type>> : std::is_trivially_copyable<Type> {
+    using Elem = Type;
+};
+
+template <typename Type>
+struct Serializable_map_traits : std::false_type {};
+
+template <typename Keytype, typename Valtype>
+struct Serializable_map_traits<std::unordered_map<Keytype, Valtype>> : std::conjunction<
+                                                                       std::is_trivially_copyable<Keytype>,
+                                                                       std::is_trivially_copyable<Valtype>> {
+    using Key = Keytype;
+    using Value = Valtype;
+};
+
+/// @brief Restores a map with fixed-size keys and values from a byte vector
 template <typename Type>
 Type deserialize(const Serialized& serialized)
 {
-    static_assert(std::is_trivially_copyable<Type>::value, \
-                  "deserialize() only works with trivially copyable values or containers of them.");
+    using Vec_traits = Serializable_vector_traits<Type>;
+    using Map_traits = Serializable_map_traits<Type>;
 
-    Type new_obj;
-    if(serialized.size() != sizeof(Type)) {
-        throw std::runtime_error("deserialize_struct(): byte vector size is not equal to type size");
+    if constexpr (std::is_trivially_copyable<Type>::value) { // Trivial types ________
+
+        Type new_obj;
+        if(serialized.size() != sizeof(Type)) {
+            throw std::runtime_error("deserialize(): byte vector size is not equal to type size");
+        }
+        std::memcpy(&new_obj, serialized.data(), sizeof(Type));
+        return new_obj;
     }
-    std::memcpy(&new_obj, serialized.data(), sizeof(Type));
-    return new_obj;
-}
+    else if constexpr (std::is_same<Type, std::string>::value) {
 
-/// @brief Restores a string from a byte vector.
-template <>
-inline std::string deserialize(const Serialized& serialized) {
-    if (serialized.empty()) {
-        return std::string();
+        if (serialized.empty()) {
+            return "";
+        }
+        return std::string(serialized.data(), serialized.size());
     }
+    else if constexpr (Vec_traits::value) { // Vector ___________________________________
+        
+        using Elem = typename Vec_traits::Elem;
 
-    return std::string(serialized.data(), serialized.size());
-}
-
-/// @brief Restores a vector of fixed-size structs or primitive types from a byte vector.
-template <typename Type>
-std::vector<Type> deserialize(const Serialized& serialized)
-{
-    static_assert(std::is_trivially_copyable<Type>::value, \
-                  "deserialize() only works with trivially copyable values or containers of them.");
-
-    if (serialized.size() % sizeof(Type) != 0) {
-        throw std::runtime_error("deserialize_vector(): byte vector not divisible by type size");
-    }
-    unsigned vector_size = serialized.size() / sizeof(Type);
+        if (serialized.size() % sizeof(Elem) != 0) {
+            throw std::runtime_error("deserialize<vector>(): byte vector not divisible by type size");
+        }
+        unsigned vector_size = serialized.size() / sizeof(Elem);
+        
+        Type vector;
+        vector.resize(vector_size);
     
-    std::vector<Type> vector;
-    vector.resize(vector_size);
-
-    std::memcpy((char*)(vector.data()), serialized.data(), sizeof(Type)*vector_size);
-    return vector;
-}
-
-/// @brief Restores a map with fixed-size keys and values from a byte vector
-template <typename Keytype, typename Valtype>
-std::unordered_map<Keytype, Valtype> deserialize(const Serialized& serialized)
-{
-    static_assert(std::is_trivially_copyable<Keytype>::value, \
-                  "deserialize() only works with trivially copyable values or containers of them.");
-    static_assert(std::is_trivially_copyable<Valtype>::value, \
-                  "deserialize() only works with trivially copyable values or containers of them.");
-    
-    if (serialized.size() % (sizeof(Keytype) + sizeof(Valtype))) {
-        throw std::runtime_error("deserialize_map(): byte vector size not divisible by key+value size");
+        std::memcpy((char*)(vector.data()), serialized.data(), sizeof(Elem)*vector_size);
+        return vector;
     }
-    unsigned map_size = serialized.size() / (sizeof(Keytype) + sizeof(Valtype));
-    std::unordered_map<Keytype, Valtype> map;
+    else if constexpr (Map_traits::value) { // Map ________________________________________
 
-    for (unsigned int i = 0; i < map_size; i++) {
-        Serialized serialized_key(serialized.begin() + i*(sizeof(Keytype) + sizeof(Valtype)), \
-                                  serialized.begin() + i*(sizeof(Keytype) + sizeof(Valtype)) + sizeof(Keytype));
-        Keytype key = deserialize<Keytype>(serialized_key);
-        Serialized serialized_val(serialized.begin() + i*(sizeof(Keytype) + sizeof(Valtype)) + sizeof(Keytype), \
-                                  serialized.begin() + i*(sizeof(Keytype) + sizeof(Valtype)) + sizeof(Keytype) \
-                                  + sizeof(Valtype));
-        Valtype val = deserialize<Valtype>(serialized_val);
-        map.insert({key, val});
+        using Key = typename Map_traits::Key;
+        using Value = typename Map_traits::Value;
+
+        if (serialized.size() % (sizeof(Map_traits::Key) + sizeof(Map_traits::Value))) {
+            throw std::runtime_error("deserialize_map(): byte vector size not divisible by key+value size");
+        }
+        unsigned map_size = serialized.size() / (sizeof(Map_traits::Key) + sizeof(Map_traits::Value));
+        Type map;
+
+        for (unsigned int i = 0; i < map_size; i++) {
+            Serialized serialized_key(serialized.begin() + i*(sizeof(Map_traits::Key) + sizeof(Map_traits::Value)), \
+                                    serialized.begin() + i*(sizeof(Map_traits::Key) + sizeof(Map_traits::Value)) + sizeof(Map_traits::Key));
+            typename Map_traits::Key key = deserialize<Map_traits::Key>(serialized_key);
+            Serialized serialized_val(serialized.begin() + i*(sizeof(Map_traits::Key) + sizeof(Map_traits::Value)) + sizeof(Map_traits::Key), \
+                                    serialized.begin() + i*(sizeof(Map_traits::Key) + sizeof(Map_traits::Value)) + sizeof(Map_traits::Key) \
+                                    + sizeof(Map_traits::Value));
+            typename Map_traits::Value val = deserialize<Map_traits::Value>(serialized_val);
+            map.insert({key, val});
+        }
+        return map;
     }
-    return map;
+    else { // Unsupported __________________________________________________________________
+        static_assert(false, "deserialize() only works with trivially copyable values or containers (umaps, vectors) of them.");
+    }
 }
