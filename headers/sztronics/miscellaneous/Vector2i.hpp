@@ -9,6 +9,7 @@ struct Vector2i
     int32_t y;
 
     constexpr Vector2i(int x = 0, int y = 0) : x(x), y(y) {} 
+    constexpr Vector2i(const int32_t (&list)[2]) : x(list[0]), y(list[1]) {}
 
     constexpr inline Vector2i operator+ (const Vector2i& other) const { return { x + other.x, y + other.y }; }
     constexpr inline Vector2i operator- (const Vector2i& other) const { return { x - other.x, y - other.y }; }
