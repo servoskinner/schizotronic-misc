@@ -6,3 +6,7 @@ file(GLOB SOURCES "source/*.cpp")
 
 add_library(sztronics_miscellaneous STATIC ${SOURCES})
 target_include_directories(sztronics_miscellaneous PUBLIC headers)
+
+if(ENABLE_DEBUG)
+    target_compile_options(sztronics_miscellaneous PRIVATE "-g")
+endif()
