@@ -6,7 +6,7 @@
 #include <optional>
 #include <stdint.h>
 
-#include <sztronics/miscellaneous/Vector2i.hpp>
+#include <sztronics/miscellaneous/Vector2.hpp>
 
 /// @brief Attempts to find an element in vector and remove it.
 /// @return Whether the element was found and popped.
